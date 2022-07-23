@@ -31,8 +31,6 @@
 spring:
   # 配置数据源信息
   datasource:
-    #配置数据源类型
-    type: com.zaxxer.hikari.HikariDataSource
     #配置数据库连接池信息
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:13306/mybatis_plus?characterEncoding=utf-8&useSSL=false
@@ -53,7 +51,7 @@ spring:
 
     jdbc:mysql://localhost:3306/mybatis_plus?characterEncoding=utf-8&useSSL=false
 
-  * MySQL8.0版本的url：jdbc:mysql://localhost:3306/mybatis_plusserverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false
+  * MySQL8.0版本的url：jdbc:mysql://localhost:3306/mybatis_plusserverserverTimezone=GMT%2B8
 
 ## 配置类型别名
 
@@ -94,7 +92,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserMapper extends BaseMapper<User> {
 }
-
 ```
 
 * 使用@MapperScan扫描mapper接口所在的包

@@ -49,6 +49,51 @@
 
   * 在客户端访问：shutdown 
   * 在客户端访问：exit                  +             ps -ef | grep redis（查看进程）+ kill 进程号
+  
+* 设置开机自启动
+
+  * 创建文件
+
+  ```
+  vi /etc/systemd/system/redis.service
+  ```
+
+  * 内容如下
+
+  ```
+  [Unit]
+  Description=redis-server
+  After=network.target
+  
+  [Service]
+  Type=forking
+  ExecStart=/usr/local/bin/redis-server /usr/local/src/redis-6.2.6/redis.conf
+  PrivateTmp=true
+  
+  [Install]
+  WantedBy=multi-user.target
+  ```
+
+  * 重载服务
+
+  ```
+  systemctl daemon-reload
+  ```
+
+  * 使用下面的命令进行操作
+
+  ```
+  # 启动
+  systemctl start redis
+  # 停止
+  systemctl stop redis
+  # 重启
+  systemctl restart redis
+  # 查看状态
+  systemctl status redis
+  # 执行下面的命令，可以让redis开机自启：
+  systemctl enable redis
+  ```
 
 # 相关基础知识
 
@@ -60,9 +105,25 @@
 
 ![image-20220511172510271](redis.assets/image-20220511172510271.png)
 
-# 常用命令
+## redis命令行客户端
+
+* redis安装完成后就自带了命令行客户端：redis-cli，使用方式如下
+
+```
+redis-cli [options] [commonds]
+```
+
+* 常用的options：
+  * -h 连接地址（127.0.0.1）
+  * -p 端口号
+  * -a 密码
+* 直接使用-a 密码比较危险，可以先进入redis客户端再输入   AUTH 密码 登录。
+  * 使用ping与redis服务器做心跳测试
+
+## 常用命令
 
 * keys *0：查看0号库所有的key，不加0为当前库
+* select 1：切换数据库
 * exists k1：查看当前库是否存在k1
 * type k1：查看k1的类型
 * del k1：删除k1
@@ -75,31 +136,60 @@
 
 # 常用数据类型
 
+## redis中key的格式
+
+* redis的key允许有多个单词形成层级结构，多个单词之间用:隔开，如下：
+  * 项目名：业务名：类型：id
+* 类似于java中的包层级关系
+* 这个格式非固定，也可以根据自己的需求来删除或添加词条
+  * set com:shy:user:1 tom
+  * set com:shy:product:1 p1
+* 在redis的图形化界面中可以清楚的观察出层级关系
+
 ## String
 
 * String类型是二进制安全的，意味着可以包含任何数据类型，比如jpg，序列化的对象
 * 一个String的value最多可以是512M
+* String类可以是普通字符串，也可以是int或者float，字符串与数字之间只是存储方式不同，使用上没有任何区别
 
 ### 常用命令
 
-* append k1 值：在已经存在的k1上追加值
-* strlen k1：得到k1的长度
+* set k1 值：设置键值对 k1 值
+* get k1：获取键k1的值，设置已经存在的键会覆盖
+* mset k1 v1 k2 v2：批量设置多个
+* mget k1 k2 k3：批量获取
 * incr k1：k1++
 * decr k1：k1--
 * incrby k1 10：k1+10
 * decrby k1 10：k1-10
-* set k1 值：设置键值对 k1 值
-* get k1：获取键k1的值，设置已经存在的键会覆盖
+* append k1 值：在已经存在的k1上追加值
+* strlen k1：得到k1的长度
 * setnx k1 值：若k1存在，不发生改变，若不存在，设置k1的值
-* mset k1 v1 k2 v2：批量设置多个
-* mget k1 k2 k3：批量获取
 * msetnx k1 v1 k2 v2：k1 k2都不存在才能成功
 * getrange k1 0 3：获取字符串k1前四个位置的值
 * setrange k1 3 abc：从3号位置开始覆盖为abc
 * setex age 20 value 30：设置age=30过期时间20s
 * getset k1 tom：获取k1，并且设置k1为tom
 
-## 列表List
+## Hash
+
+* 是一个键值对集合
+* 想要存储java对象可以使用JSON存储，但是该方法在数据库中进行修改格外困难，因此使用Hash进行存储
+* 是一个string类的filed和value的映射表，特别适合存储对象。
+
+### 常用命令
+
+* hset k1 f1 v1：向k1中添加键值对 f1 v1
+* hget k1 f1：取出k1中f1对应的v1
+* hmset k1 f1 v1 f2 v2：批量添加
+* hgetall k1：获取k1所有的键值对
+* hexists k1 f1：查看k1中f1是否存在
+* hkeys k1：查看k1中所有的f
+* hvals k1：查看k1中所有的v
+* hincrby k1 f1 n：给k1中的f1加上n
+* hsetnx k1 f1 v1：存在不添加，不存在添加
+
+## List
 
 * 简单的字符串列表，按照插入顺序排序，可以插入一个数据到头部或者尾部
 * 底层是双向链表，对两端容易操作，操作中间元素性能较差
@@ -122,8 +212,9 @@
 * linsert k1 before/after v1 v2：在v1之前/之后添加值v2
 * lrem k1 3 v1：将k1从左到右删除3个v1
 * lset k1 1 v2：修改
+* blpop/brpop k1 100：阻塞式的取出，k1如果为空会一直阻塞（lpop会直接返回nil）持续100秒，100秒内有元素添加进来就会取出来
 
-## 集合Set
+## Set
 
 * Set是String类型的无序集合，底层是value为null的Hash表
 
@@ -141,23 +232,7 @@
 * sunion k1 k2：返回k1k2的并集
 * sdiff k1 k2：返回k1k2的差集
 
-## Hash
-
-* 是一个键值对集合
-* 是一个string类的filed和value的映射表，特别适合存储对象。
-
-### 常用命令
-
-* hset k1 f1 v1：向k1中添加键值对 f1 v1
-* hget k1 f1：取出k1中f1对应的v1
-* hmset k1 f1 v1 f2 v2：批量添加
-* hexists k1 f1：查看k1中f1是否存在
-* hkeys k1：查看k1中所有的f
-* hvals k1：查看k1中所有的v
-* hincrby k1 f1 n：给k1中的f1加上n
-* hsetnx k1 f1 v1：存在不添加，不存在添加
-
-## Zset
+## Zset/SortedSet
 
 * 与set相似，但是是有序的。
 
@@ -360,11 +435,13 @@
 * georadius k1 经度 维度 距离 单位
   * 从k1中取得，以经度维度为中心，距离为半径，方圆距离以内的所有元素
 
-# jedis
+# Redis的java客户端
+
+## jedis
 
 * 是redis的一个客户端工具，通过java操作redis，类似于jdbc技术
 
-## 测试连接
+### 测试连接
 
 * 在本机连接虚拟机上的redis时需要有一下要求
 
@@ -404,6 +481,7 @@ public class Main {
         Jedis jedis = new Jedis("192.168.232.128",6379);
         String ping = jedis.ping();
         System.out.println(ping);
+        jedis.close();
     }
 }
 ```
@@ -412,7 +490,7 @@ public class Main {
 
 ![image-20220513163930379](redis.assets/image-20220513163930379.png)
 
-## 测试对redis的操作
+### 测试对redis的操作
 
 * keys *
 
@@ -446,6 +524,10 @@ public class Main {
     }
 }
 ```
+
+## Jedis的线程池
+
+* jedis本身线程不安全，并且频繁的创建和销毁连接会有性能损耗，因此推荐使用jedis连接池
 
 ## 案例：模拟验证码发送
 
@@ -512,7 +594,13 @@ public class Main {
 }
 ```
 
-# springboot整合redis
+## SpringDataRedis
+
+* springdata是spring中数据库的操作模块，包含各种数据库的集成，其中对redis集成的模块就叫做springdataredis
+* 提供了不同的java客户端：jedis、lettuce
+* 支持基于jdk、json、字符串。spring对象的数据序列化与反序列化
+
+![image-20220610122436245](redis.assets/image-20220610122436245.png)
 
 * 创建springboot项目，导入相关依赖
 
@@ -525,7 +613,6 @@ public class Main {
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
-            <version>2.6.0</version>
         </dependency>
 ```
 
@@ -550,7 +637,7 @@ spring.redis.lettuce.pool.max-idle=5
 spring.redis.lettuce.pool.min-idle=0
 ```
 
-* redis的自动配置类
+* redis的自动配置类，也可以使用springboot整合的
 
 ```java
 @EnableCaching
@@ -639,6 +726,196 @@ public class SpringbootRedisApplication {
     }
 }
 ```
+
+# 缓存
+
+* 基本使用：
+
+```java
+@Service
+public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Override
+    public Result queryById(Long id) {
+        //1.从redis缓存中查询店铺信息
+        String shopKey = CACHE_SHOP_KEY + id;
+        String shopJOSN = stringRedisTemplate.opsForValue().get(shopKey);
+        //2.如果查到了，就返回
+        if(StrUtil.isNotBlank(shopJOSN)){
+            Shop shop = JSONUtil.toBean(shopJOSN, Shop.class);
+            return Result.ok(shop);
+        }
+        //3.如果查不到，去mysql中查询，并且写入redis并且返回
+        Shop shop = getById(id);
+        //如果查不到，说明查询错误
+        if(shop == null){
+            return Result.fail("店铺不存在");
+        }
+
+        stringRedisTemplate.opsForValue().set(shopKey,JSONUtil.toJsonStr(shop));
+        return Result.ok(shop);
+    }
+}
+```
+
+## 缓存更新策略
+
+* 策略：
+  * 内存淘汰：不用自己维护，利用redis的内存淘汰机制，当内存不足时自动淘汰部分数据，下次查询时更新缓存，虽然几乎没有维护成本，但是数据一致性较差
+  * 超时剔除：给缓存添加ttl时间，到期后自动删除缓存，下次查询时更新缓存。有一定的维护成本数据一致性的维持一般
+  * 主动更新：编写业务逻辑，在修改数据库的同时更新缓存，虽然维护成本较高但是能非常好的保存数据一致性
+* 业务场景：
+  * 低一致性业务：采用内存淘汰。例如店铺类型的查询缓存
+  * 高一致性需求：主动更新，并且以超时剔除作为兜底方案。例如店铺详情查看
+* 主动更新业务实现：
+  * 由缓存的调用者，在更新数据库的同时更新缓存
+  * 缓存与数据库整合为一个服务，由服务来维护一致性。调用者用该服务，无需关心缓存一致性问题
+  * 调用者只操作缓存，由其他线程异步将缓存持久化到数据库，最终保证一致性
+* 以第一种主动更新实现：
+  * 删除缓存还是更新缓存？
+    * 删除缓存
+  * 如何保证缓存与数据库的操作同时成功或失败？
+    * 单体系统：将缓存与数据库操作放在一个事务中
+    * 分布式系统：利用tcc等分布式事务方案
+  * 先操作缓存还是数据库？
+    * 先操作数据库
+
+* 设置过时时间
+
+```java
+stringRedisTemplate.opsForValue().set
+    (shopKey,JSONUtil.toJsonStr(shop),30, TimeUnit.MINUTES);
+```
+
+* 修改数据库删除缓存并且保证事务的原子性
+
+```java
+@Override
+@Transactional
+public Result update(Shop shop) {
+    Long id = shop.getId();
+    if (id == null){
+        return Result.fail("店铺id不能为null");
+    }
+    updateById(shop);
+    stringRedisTemplate.delete(CACHE_SHOP_KEY + id);
+    return Result.ok();
+}
+```
+
+## 缓存穿透
+
+* 缓存穿透是指客户端请求的数据在缓存中和数据库中都不存在，这样缓存永远不会生效，这些请求都会打到数据库
+* 常见解决方案：
+  * 缓存空对象：实现简单，维护方便，但可能造成额外的内存消耗，可能造成短期的不一致
+  * 布隆过滤：内存占用较少，没有多余key，但是实现较为复杂，存在误判可能
+* 使用缓存空对象的方法解决缓存穿透问题：
+
+```java
+    @Override
+    public Result queryById(Long id) {
+        String shopKey = CACHE_SHOP_KEY + id;
+        String shopJOSN = stringRedisTemplate.opsForValue().get(shopKey);
+        if(StrUtil.isNotBlank(shopJOSN)){
+            Shop shop = JSONUtil.toBean(shopJOSN, Shop.class);
+            return Result.ok(shop);
+        }
+        if(shopJOSN != null){
+            return Result.fail("店铺信息不存在");
+        }//如果是空值，解决缓存穿透问题,直接返回错误信息
+        Shop shop = getById(id);
+        if(shop == null){
+            //查询不到在缓存中设置空值
+            stringRedisTemplate.opsForValue().set(shopKey,"",5,TimeUnit.MINUTES);
+            return Result.fail("店铺不存在");
+        }
+
+        stringRedisTemplate.opsForValue().set(shopKey,JSONUtil.toJsonStr(shop),30, TimeUnit.MINUTES);
+        return Result.ok(shop);
+    }
+```
+
+## 缓存雪崩
+
+* 缓存雪崩是指在同一时间段有大量缓存的key同时失效或者redis宕机，导致大量请求到达数据库，带来巨大压力。
+* 解决方案：
+  * 给不同的key的ttl添加随机值
+  * 利用redis集群提高服务的可用性
+  * 给缓存业务添加降级限流策略
+  * 给业务添加多级缓存
+
+## 缓存击穿
+
+* 缓存击穿问题也称为热点key问题，是一个被高并发访问并且缓存重建业务较复杂的key突然失效了，无数的请求访问会在瞬间给数据库带来巨大的冲击
+
+* 常见解决方案：
+
+  * 互斥锁
+
+  * 逻辑过期
+
+  ![image-20220613180031644](redis.assets/image-20220613180031644.png)
+
+![image-20220613180129320](redis.assets/image-20220613180129320.png)
+
+![image-20220613180143875](redis.assets/image-20220613180143875.png)
+
+### 利用互斥锁解决缓存击穿
+
+![image-20220614143328913](redis.assets/image-20220614143328913.png)
+
+```java
+@Override
+public Result queryById(Long id) {
+    String shopKey = CACHE_SHOP_KEY + id;
+    String shopJOSN = stringRedisTemplate.opsForValue().get(shopKey);
+    if(StrUtil.isNotBlank(shopJOSN)){
+        Shop shop = JSONUtil.toBean(shopJOSN, Shop.class);
+        return Result.ok(shop);
+    }
+    if(shopJOSN != null){
+        return Result.fail("店铺信息不存在");
+    }
+    Shop shop = null;
+    try {
+        //实现缓存重建，解决缓存击穿问题
+        //1.获取互斥锁
+        boolean lock = getLock("lock:shop" + id);
+        //2.判断是否获取成功
+        if(!lock){
+            //获取失败，休眠一段时间之后重试
+            Thread.sleep(50);
+            return queryById(id);
+        }
+        //获取成功，查询mysql
+        shop = getById(id);
+        if(shop == null) {
+            stringRedisTemplate.opsForValue().set(shopKey, "", 5, TimeUnit.MINUTES);
+            return Result.fail("店铺不存在");
+        }
+        stringRedisTemplate.opsForValue().set(shopKey,JSONUtil.toJsonStr(shop),30, TimeUnit.MINUTES);
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    } finally {
+        //释放互斥锁
+        unLock("lock:shop" + id);
+    }
+    return Result.ok(shop);
+}
+
+public boolean getLock(String key){
+    Boolean result = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
+    return BooleanUtil.isTrue(result);
+}
+public void unLock(String key){
+    stringRedisTemplate.delete(key);
+}
+```
+
+### 利用逻辑过期方式解决缓存击穿问题
 
 # redis事务
 

@@ -1,4 +1,4 @@
-# 服务拆分及远程调用
+#  服务拆分及远程调用
 
 * 拆分注意事项：
   * 不同微服务不能重复开发相同业务
@@ -284,7 +284,6 @@ public class OrderApplication {
       NFLoadBalanceRuleClassName: com.netflix.loadbalancer.RandomRule
   ```
 
-  
 
 ## 饥饿加载
 
@@ -335,7 +334,7 @@ spring:
 spring:
   cloud:
     nacos:
-      server-addr: localhost:8848
+      server-addr: localhost:8848 #这里可以不进行配置，默认8848
 ```
 
 * 对服务进行观测管理
@@ -391,6 +390,8 @@ spring:
 * 此时停止8081的服务，进行访问会访问8082，但是会warning因为进行了跨集群访问![image-20220528182251550](springcloud.assets/image-20220528182251550.png)
 
 ## 服务实例的权重设置
+
+* 在HZ集群下，对userservice的调用是采用随机的方式，在实际生产环境考虑到不同服务器的质量等，我们可以设置不同实例的访问权重
 
 ![image-20220528182727488](springcloud.assets/image-20220528182727488.png)
 
@@ -534,7 +535,6 @@ spring:
   }
   ```
 
-  
 
 ## 多环境配置共享
 
@@ -639,47 +639,112 @@ spring:
 
   * 进行测试：可以发现Feign还实现了负载均衡
 
+## Feign的超时控制
+
+* 超时报错演示:
+
+  * payment8001的业务层时间超过了三秒
+
+  ```java
+  @GetMapping("/feign/timeout")
+      public String timeOutTest(){
+          try {
+              Thread.sleep(3000);
+          } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+          }
+          return "TimeOutTest";
+      }
+  ```
+
+  * 在消费者模块编写feign客户端调用payment8001该业务
+
+  ```java
+  @FeignClient("CLOUD-PAYMENT-SERVICE")
+  public interface PaymentFeignService {
+      @GetMapping("/payment/select/{id}")
+      Result<Payment> select(@PathVariable("id") Long id);
+  
+      @GetMapping("/payment/feign/timeout")
+      String timeOutTest();
+  }
+  ```
+
+  * 消费者模块调用feign客户端
+
+  ```java
+    @GetMapping("/feign/timeout")
+      public String timeOutTest(){
+          return paymentFeignService.timeOutTest();
+      }
+  ```
+
+  * 调用报错：Read timed out executing GET http://CLOUD-PAYMENT-SERVICE/payment/feign/timeout
+
+  * OpenFeign默认等待1秒钟，超过后报错 
+
+* 我们可以通过修改该默认时间解决该报错问题
+
+```yaml
+#设置feign客户端超时时间(OpenFeign默认支持ribbon)
+ribbon:
+#指的是建立连接后从服务器读取到可用资源所用的时间
+  ReadTimeout: 5000
+#指的是建立连接所用的时间，适用于网络状况正常的情况下,两端连接所用的时间
+  ConnectTimeout: 5000
+```
+
+
+
 ## Feign自定义配置
 
 ![image-20220601132529641](springcloud.assets/image-20220601132529641.png)
 
-* 对日志的级别进行自定义配置
+## 对日志的级别进行自定义配置
 
-  * 使用配置文件配置：
+* Feign 提供了日志打印功能，我们可以通过配置来调整日志级别，从而了解 Feign 中 Http 请求的细节。
+  说白了就是对Feign接口的调用情况进行监控和输出
+* 日志级别：
+  * NONE：默认的，不显示任何日志；
+  * BASIC：仅记录请求方法、URL、响应状态码及执行时间；
+  * HEADERS：除了 BASIC 中定义的信息之外，还有请求和响应的头信息；
+  * FULL：除了 HEADERS 中定义的信息之外，还有请求和响应的正文及元数据。
 
-  ```yaml
-  #全局配置
-  feign: 
-    client: 
-      config: 
-        default: # 这里default就是全局配置，如果写服务名称，就是针对某个微服务的配置
-        	loggerLevel: FULL # 日志级别
-  ```
+* 使用配置文件配置：
 
-  ```yaml
-  #局部配置
-  feign: 
-    client: 
-      config: 
-        userservice:
-        	loggerLevel: FULL # 日志级别
-  ```
+```yaml
+#全局配置
+feign: 
+  client: 
+    config: 
+      default: # 这里default就是全局配置，如果写服务名称，就是针对某个微服务的配置
+      	loggerLevel: FULL # 日志级别
+```
 
-  * 使用注解进行配置
+```yaml
+#局部配置
+feign: 
+  client: 
+    config: 
+      userservice:
+      	loggerLevel: FULL # 日志级别
+```
 
-    * 首先配置Bean
+* 使用注解进行配置1
 
-    ![image-20220601133617991](springcloud.assets/image-20220601133617991.png)
+  * 首先配置Bean
 
-    * 进行全局配置/局部配置
+  ![image-20220601133617991](springcloud.assets/image-20220601133617991.png)
 
-      全局配置：放在启动类的@EnableFeignClients中
+  * 进行全局配置/局部配置
 
-      ![image-20220601133654839](springcloud.assets/image-20220601133654839.png)
+    全局配置：放在启动类的@EnableFeignClients中
 
-      局部配置：放在接口中的@FeignClient中
+    ![image-20220601133654839](springcloud.assets/image-20220601133654839.png)
 
-      ![image-20220601133740399](springcloud.assets/image-20220601133740399.png)
+    局部配置：放在接口中的@FeignClient中
+
+    ![image-20220601133740399](springcloud.assets/image-20220601133740399.png)
 
 ## Feign性能优化
 
@@ -712,7 +777,6 @@ spring:
       max-connections-per-route: 50 # 每个路径的最大连接数
   ```
 
-  
 
 ## feign-api
 
@@ -837,6 +901,8 @@ spring:
 
 ![image-20220604122618581](springcloud.assets/image-20220604122618581.png)
 
+* 全局过滤器
+
 # Docker入门
 
 ## 镜像操作
@@ -879,3 +945,199 @@ spring:
 * docker exec相关的进入容器：不建议使用
 * docker rm 容器名/id：删除指定非运行状态容器
   * -f：强制删除
+
+## 数据卷操作
+
+* 数据卷是一个虚拟目录，指向宿主机文件中的某个目录
+
+* 数据卷的作用：
+
+  * 将容器与数据分离，解耦合，方便操作容器内数据，保证数据安全
+
+  ![image-20220605154530263](springcloud.assets/image-20220605154530263.png)
+
+* docker volume create 数据卷名：创建一个数据卷
+* docker volume ls：查看所有数据卷
+* docker volume inspect 数据卷名：查看指定数据卷的详细信息
+* docker volume prune：删除所有未使用的数据卷
+* docker volume rm 数据卷名：删除指定数据卷
+
+* docker run --name nginxcontainer -p 80:80 -v html:/usr/share/nginx/html -d nginx：创建容器并且将/usr/share/nginx/html挂载到html数据卷下
+  
+  * 当数据卷不存在时，docker会自动创建
+
+## 练习
+
+创建并且运行一个mysql容器，将宿主机目录直接挂载到容器
+
+* 目录挂载：
+
+  * -v 宿主机目录:容器内目录
+  * -v 宿主机文件:容器内文件
+    * 此时宿主机的文件会直接覆盖容器内文件
+
+* 实现过程：
+
+  * 加载mysql镜像
+  * 创建/tmp/mysql/data：作为数据库存储文件
+  * 创建/tmp/mysql/conf：作为数据库配置文件
+    * 将相关配置放入该文件夹
+  * 创建并且运行mysql容器
+
+  ```
+  docker run \
+   --name mysqlcontainer \
+   -e MYSQL_ROOT_PASSWORD=abc123 \
+   -p 13306:13306 \
+   -v /tmp/mysql/conf/hmy.cnf:/etc/mysql/conf.d/hmy.cnf \
+   -v /tmp/mysql/data:/var/lib/mysql \
+   -d  \
+   mysql:5.7.25
+  ```
+
+
+## Dockerfile自定义镜像
+
+* 镜像是将应用程序及其需要的系统函数库、环境、配置、依赖打包而成
+* 镜像是分层结构，每一层称为一个Layer
+  * BaseImage层：包含基本的系统库函数、环境变量、系统文件
+  * Entrypoint：入口，是镜像中应用启动的命令
+  * 其他：在BaseImage基础上添加依赖、安装程序、完成整个应用的安装和配置
+
+# MQ入门
+
+## 同步通讯与异步通讯
+
+微服务间通讯有同步和异步两种方式：
+
+同步通讯：就像打电话，需要实时响应。
+
+异步通讯：就像发邮件，不需要马上回复。
+
+![image-20220721105721626](springcloud.assets/image-20220721105721626.png)
+
+两种方式各有优劣，打电话可以立即得到响应，但是你却不能跟多个人同时通话。发送邮件可以同时与多个人收发邮件，但是往往响应会有延迟。
+
+### 同步通讯
+
+我们之前学习的Feign调用就属于同步方式，虽然调用可以实时得到结果，但存在下面的问题：
+
+![image-20220721105845687](springcloud.assets/image-20220721105845687.png)
+
+总结：
+
+同步调用的优点：
+
+- 时效性较强，可以立即得到结果
+
+同步调用的问题：
+
+- 耦合度高
+- 性能和吞吐能力下降
+- 有额外的资源消耗
+- 有级联失败问题
+
+### 异步通讯
+
+异步调用则可以避免上述问题：
+
+我们以购买商品为例，用户支付后需要调用订单服务完成订单状态修改，调用物流服务，从仓库分配响应的库存并准备发货。
+
+在事件模式中，支付服务是事件发布者（publisher），在支付完成后只需要发布一个支付成功的事件（event），事件中带上订单id。
+
+订单服务和物流服务是事件订阅者（Consumer），订阅支付成功的事件，监听到事件后完成自己业务即可。
+
+为了解除事件发布者与订阅者之间的耦合，两者并不是直接通信，而是有一个中间人（Broker）。发布者发布事件到Broker，不关心谁来订阅事件。订阅者从Broker订阅事件，不关心谁发来的消息。
+
+![image-20220721105914351](springcloud.assets/image-20220721105914351.png)
+
+Broker 是一个像数据总线一样的东西，所有的服务要接收数据和发送数据都发到这个总线上，这个总线就像协议一样，让服务间的通讯变得标准和可控。
+
+好处：
+
+- 吞吐量提升：无需等待订阅者处理完成，响应更快速
+
+- 故障隔离：服务没有直接调用，不存在级联失败问题
+- 调用间没有阻塞，不会造成无效的资源占用
+- 耦合度极低，每个服务都可以灵活插拔，可替换
+- 流量削峰：不管发布事件的流量波动多大，都由Broker接收，订阅者可以按照自己的速度去处理事件
+
+缺点：
+
+- 架构复杂了，业务没有明显的流程线，不好管理
+- 需要依赖于Broker的可靠、安全、性能
+
+好在现在开源软件或云平台上 Broker 的软件是非常成熟的，比较常见的一种就是我们今天要学习的MQ技术。
+
+## MQ技术对比
+
+MQ，中文是消息队列（MessageQueue），字面来看就是存放消息的队列。也就是事件驱动架构中的Broker。
+
+比较常见的MQ实现：
+
+- ActiveMQ
+- RabbitMQ
+- RocketMQ
+- Kafka
+
+几种常见MQ的对比：
+
+|            | **RabbitMQ**            | **ActiveMQ**                   | **RocketMQ** | **Kafka**  |
+| ---------- | ----------------------- | ------------------------------ | ------------ | ---------- |
+| 公司/社区  | Rabbit                  | Apache                         | 阿里         | Apache     |
+| 开发语言   | Erlang                  | Java                           | Java         | Scala&Java |
+| 协议支持   | AMQP，XMPP，SMTP，STOMP | OpenWire,STOMP，REST,XMPP,AMQP | 自定义协议   | 自定义协议 |
+| 可用性     | 高                      | 一般                           | 高           | 高         |
+| 单机吞吐量 | 一般                    | 差                             | 高           | 非常高     |
+| 消息延迟   | 微秒级                  | 毫秒级                         | 毫秒级       | 毫秒以内   |
+| 消息可靠性 | 高                      | 一般                           | 高           | 一般       |
+
+追求可用性：Kafka、 RocketMQ 、RabbitMQ
+
+追求可靠性：RabbitMQ、RocketMQ
+
+追求吞吐能力：RocketMQ、Kafka
+
+追求消息低延迟：RabbitMQ、Kafka
+
+## docker下RabbitMQ的安装
+
+* 拉取镜像
+
+```
+docker pull rabbitmq:3-management
+```
+
+* 创建启动容器
+  * 15672端口是管理平台的端口
+  * 5672端口是消息通信的端口
+  * hostname是主机名，集群部署必须配，单机可以不配
+
+```
+docker run \
+ -e RABBITMQ_DEFAULT_USER=shy \
+ -e RABBITMQ_DEFAULT_PASS=abc123 \
+ --name mq \
+ --hostname mq1 \
+ -p 15672:15672 \
+ -p 5672:5672 \
+ -d \
+ rabbitmq:3-management
+```
+
+* 访问15672端口
+  * 用户名密码就是在创建启动容器时候设置的用户名密码
+
+![image-20220721111548713](springcloud.assets/image-20220721111548713.png)
+
+## MQ的基本结构：
+
+![image-20220721112013916](springcloud.assets/image-20220721112013916.png)
+
+RabbitMQ中的一些角色：
+
+- publisher：生产者
+- consumer：消费者
+- exchange个：交换机，负责消息路由
+- queue：队列，存储消息
+- virtualHost：虚拟主机，隔离不同租户的exchange、queue、消息的隔离

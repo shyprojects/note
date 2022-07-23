@@ -111,6 +111,8 @@ hello.txt依然在工作区存在
 
 ![image-20220423011600800](Git.assets\image-20220423011600800.png)
 
+* 删除远程库别名：git remote rm 仓库别名
+
 ## 推送本地库到远程库
 
 * git push 别名/远程库地址 分支名
@@ -135,15 +137,15 @@ hello.txt依然在工作区存在
 
 * 添加其他成员到远程库
 
-![image-20220423173054495](D:\note_Typora\Git.assets\image-20220423173054495.png)
+![image-20220423173054495](Git.assets\image-20220423173054495.png)
 
-![image-20220423173142761](D:\note_Typora\Git.assets\image-20220423173142761.png)
+![image-20220423173142761](Git.assets\image-20220423173142761.png)
 
-![image-20220423173154730](D:\note_Typora\Git.assets\image-20220423173154730.png)
+![image-20220423173154730](Git.assets\image-20220423173154730.png)
 
 邀请后会生成一个邀请函
 
-![image-20220423173339031](D:\note_Typora\Git.assets\image-20220423173339031.png)
+![image-20220423173339031](Git.assets\image-20220423173339031.png)
 
 https://github.com/shyproject/git-demo/invitations
 
@@ -153,47 +155,47 @@ https://github.com/shyproject/git-demo/invitations
 
 非团队的人员对代码进行修改
 
-![image-20220423180709880](D:\note_Typora\Git.assets\image-20220423180709880.png)
+![image-20220423180709880](Git.assets\image-20220423180709880.png)
 
-![image-20220423180732040](D:\note_Typora\Git.assets\image-20220423180732040.png)
+![image-20220423180732040](Git.assets\image-20220423180732040.png)
 
 * 进行修改
 
-![image-20220423181009535](D:\note_Typora\Git.assets\image-20220423181009535.png)
+![image-20220423181009535](Git.assets\image-20220423181009535.png)
 
 * 修改后发送推送的请求
 
-![image-20220423181109448](D:\note_Typora\Git.assets\image-20220423181109448.png)
+![image-20220423181109448](Git.assets\image-20220423181109448.png)
 
 * 对方同意后会推送到对方的远程库
 
 ## 添加SSH免密登录协议
 
-* 在windows家目录下![image-20220423181828838](D:\note_Typora\Git.assets\image-20220423181828838.png)
+* 在windows家目录下![image-20220423181828838](Git.assets\image-20220423181828838.png)
 
 * 三次回车
 
-![image-20220423181900573](D:\note_Typora\Git.assets\image-20220423181900573.png)
+![image-20220423181900573](Git.assets\image-20220423181900573.png)
 
-![image-20220423181916061](D:\note_Typora\Git.assets\image-20220423181916061.png)
+![image-20220423181916061](Git.assets\image-20220423181916061.png)
 
-![image-20220423182022173](D:\note_Typora\Git.assets\image-20220423182022173.png)
+![image-20220423182022173](Git.assets\image-20220423182022173.png)
 
 * ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDKBPdvpfyuZBAgzWA3+PCrAHEwJ9HO2jMpfpFuDmRoChi81mQK+eU1rOb53heAHFFOXlEWvkP438it1+oLUK/J4F3Rw2H0AvXYb1wniGN4pGymgPtmSPDJ+Ft6GGAbe+q6SacMZEdmkb5CeWUnfhImi3xKvDuQGnFYKxZqskRK2hOVmRcAHd/YVAfxEPxjv0/9WiAgmrjlWSUMTWskeiWDvtwSwxFuxwR+VB2nGCGWNPkshiaAcTEOy8DOBG5oGAY8/fR54uT/hyQjYPCoYKbCLpkIoBlH2daN+CZclhl7CpiGAgQl+M+YrpBIBiEyQ67wUbNnW+g/Vnp/j8jU06qccTRp1XcMEpW4W1rRaKFh8Ih5AkoF5xW0jSDatx1A0SGaUIPjKBmB8xOaotxPiFnJHcJsuEEMmDWLja3ptM3AZrxnfJGzLAWwJkNolIUgpJfhEL2VvTYw0d4ONZDVfsRiqYbLzWpxencmsIqf0MSkSGlnb4vP2zBdHg7o3F9XHWE= shy@123.com
 
-![image-20220423182232952](D:\note_Typora\Git.assets\image-20220423182232952.png)
+![image-20220423182232952](Git.assets\image-20220423182232952.png)
 
-![image-20220423182255977](D:\note_Typora\Git.assets\image-20220423182255977.png)
+![image-20220423182255977](Git.assets\image-20220423182255977.png)
 
 * 添加公钥
 
-![image-20220423182430785](D:\note_Typora\Git.assets\image-20220423182430785.png)
+![image-20220423182430785](Git.assets\image-20220423182430785.png)
 
-![image-20220423182356713](D:\note_Typora\Git.assets\image-20220423182356713.png)
+![image-20220423182356713](Git.assets\image-20220423182356713.png)
 
 * 使用ssh拉取推送代码
 
-![image-20220423183139784](D:\note_Typora\Git.assets\image-20220423183139784.png)
+![image-20220423183139784](Git.assets\image-20220423183139784.png)
 
 # IDEA集成git
 

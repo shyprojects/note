@@ -476,3 +476,46 @@ public class test8 {
 }
 ```
 
+# 注解
+
+## 可重复注解
+
+* jdk8以前：同一个注解不能重复标注
+
+  ![image-20220607225146531](java8新特性.assets/image-20220607225146531.png)
+
+![image-20220607224958789](java8新特性.assets/image-20220607224958789.png)
+
+* 可以使用数组解决该问题
+
+![image-20220607225205031](java8新特性.assets/image-20220607225205031.png)
+
+![image-20220607225216063](java8新特性.assets/image-20220607225216063.png)
+
+* jdk8新特性：可重复注解
+
+  * 在@MyAnnotation上使用新的元注解@Repeatable，值为@MyAnnotations.class
+  * @MyAnnotation与@MyAnnotations的@Target与@Retention等要一致
+
+  ![image-20220607225620192](java8新特性.assets/image-20220607225620192.png)
+
+  ![image-20220607225629745](java8新特性.assets/image-20220607225629745.png)
+
+## 类型注解
+
+* @Target注解的值中新增加了两个：
+
+  * ElementType.TYPE_PARAMETER：表示该注解能写在类型变量的声明语句中，如：泛型声明
+
+  ![image-20220607230403050](java8新特性.assets/image-20220607230403050.png)
+
+  ![image-20220607230552643](java8新特性.assets/image-20220607230552643.png)
+
+  * ElementType.TYPE_USE：表示该注解能写在使用类型的任何语句中
+
+  ![image-20220607230609570](java8新特性.assets/image-20220607230609570.png)
+
+  ![image-20220607230702241](java8新特性.assets/image-20220607230702241.png)
+
+
+

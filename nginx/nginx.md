@@ -68,6 +68,18 @@ yum install -y zlib zlib-devel
 
 * 查看地址端口 ip addr
 
+# Nginx的目录结构
+
+* sbin：主程序启动的文件
+* html：访问站点的默认页面
+  * index.html：欢迎页
+* conf：存放了nginx的主要配置文件
+  * nginx.conf：主配置
+* logs：记录日志
+  * access.log：记录访问日志
+  * error.log：用户访问错误时记录日志
+  * nginx.pid：记录nginx的主进程的pid
+
 # Nginx的配置文件
 
 * 位置在nginx/conf/nginx.conf
@@ -105,6 +117,84 @@ yum install -y zlib zlib-devel
         （也可以是 IP 别名）之外的字符串（例如 前面的 /uri-string）进行匹配，对特定的请求进行处理。地址定向、数据缓
 
         存和应答控制等功能，还有许多第三方模块的配置也在这里进行
+
+## 最小配置解读
+
+```
+worker_processes  1;                  #创建的子进程的数量，由CPU等决定
+
+events {
+    worker_connections  1024;         #每个子进程的最大连接数
+}
+
+
+http {
+    include       mime.types;                #include表示包含某个文件，mine.types中定义了众多后												#缀名结尾的文件发送给浏览器端后浏览器端的处理方式：展											    #示？下载？
+    
+    default_type  application/octet-stream;  #其他的后缀名文件的默认处理方式
+
+    sendfile        on;                      #开启零拷贝
+
+    keepalive_timeout  65;                   #超时时间
+
+#一个虚拟主机vhost的配置，nginx可以配置多个虚拟主机
+    server {
+        listen       80;
+        server_name  localhost;   #主机名或者域名
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+    }
+
+}
+```
+
+## 虚拟主机原理
+
+* 防止服务器资源过剩，因此为一个主机配置多个域名，不同域名访问该主机返回不同目录下的资源
+
+![image-20220608140019842](nginx.assets/image-20220608140019842.png)
+
+## 使用hosts解析文件域名
+
+![image-20220608140638029](nginx.assets/image-20220608140638029.png)
+
+![image-20220608141221057](nginx.assets/image-20220608141221057.png)
+
+## 公网域名配置
+
+* 在阿里云购买域名并且解析
+
+![image-20220609124801682](nginx.assets/image-20220609124801682.png)
+
+## 虚拟主机域名配置
+
+![image-20220609131152719](nginx.assets/image-20220609131152719.png)
+
+* 配置不同的虚拟主机目录
+* 注意：listen+server_name需要唯一
+
+![image-20220609133555680](nginx.assets/image-20220609133555680.png)
+
+* 访问
+
+## server_name的多种匹配方式
+
+* 在进行匹配时会先按照配置文件的顺序进行匹配，若没匹配到，则会访问第一个
+
+# Nginx的执行流程
+
+* 启动nginx后，会启动master主进程，主进程不负责请求的处理，而是配合子进程完成请求的处理
+
+![image-20220608112235070](nginx.assets/image-20220608112235070.png)
 
 # 反向代理实现
 
